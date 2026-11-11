@@ -1,77 +1,50 @@
 # BiBaZu Design Parameter Simulator
 
-## PyBullet design parameter study
+This repository contains the PyBullet simulation code for studying how prototype settings affect aerodynamic part feeding. The simulator releases workpieces onto a chute, applies a force pulse at the configured nozzle location, and classifies the resulting motion and orientation. The parameter sweep varies the chute angles, entry speed, force application point, nozzle offset and pulse force.
 
-This repository contains the PyBullet simulation code for the following paper.
+Dasha Shieff, Tobias Recker and Annika Raatz (2025). [Aerodynamic Feeding 4.1: Simulation Based Parameter Selection for a Flexible Part Feeding Prototype](https://doi.org/10.1016/j.procir.2025.08.092). *Procedia CIRP*, 136, 534–539. [BiBaZu project and prototype](https://match-bibazu.github.io/#paper-aerodynamic-feeding)
 
-Dasha Shieff, Tobias Recker and Annika Raatz (2025). [Aerodynamic Feeding 4.1: Simulation Based Parameter Selection for a Flexible Part Feeding Prototype](https://doi.org/10.1016/j.procir.2025.08.092). *Procedia CIRP*, 136, 534–539.
+## Run a PyBullet sweep
 
-[Main.py](Main.py) sets up the parameter sweep, and [DroptestsFaster.py](DroptestsFaster.py) runs the PyBullet drop simulations.
+Set up a Python 3.11 environment on x86-64 Linux or WSL. Use NumPy 1.26.4, as specified in the simulator source. The sweep uses the OBJ and STL meshes already checked into the repository.
 
-## Blender pose finding
-
-A Blender-based simulation tool designed to model and visualize workpieces being dropped onto flat surfaces from a chute. This repository contains scripts and assets that enable the creation of dynamic simulations for evaluating how various workpieces behave under controlled drop conditions.
-
-Features:
-+ Simulates the dynamic behavior of various workpieces as they drop onto different surfaces.
-+ Visualizes and analyzes how workpieces interact with flat and tilted surfaces based on physical properties.
-+ Supports customizable configurations, allowing users to modify workpieces and surface parameters.
-
-Installation Instructions:
-__1. Install Required Software:__
-
-Blender
-+ Download and install Blender from the official website: Blender Download
-  + Ensure you have Blender 2.9x or newer installed, as the tool relies on Blender's Python API.
-
-Python Libraries
-
-You'll need the following Python libraries for running the simulations and handling 3D files. Install them via pip:
-
-+ numpy: A fundamental library for numerical computations in Python.
-+ numpy-stl: For handling STL (stereolithography) files, a common format for 3D models.
-+ mpl_toolkits.mplot3d.art3d: Part of Matplotlib, this library is used for 3D visualization in Python.
-
-You can install all the necessary libraries with the following command:
-
-    pip install numpy numpy-stl matplotlib
-
-__2. Unzip and Organize the Assets:__
-
-The repository includes several zipped folders containing assets needed for the simulation. Follow these steps to ensure they are set up correctly:
-
-+ Surfaces: This folder contains various surface models that the workpieces will drop onto.
-+ Workpieces: This folder contains 3D models of the workpieces being simulated.
-+ SimulationData: Stores data generated during the simulations, including parameters, results, and configurations.
-
-Important: Ensure that you unzip each of these folders and place the contents directly in the main repository folder. Make sure they are not inside other zipped folders.
-
-__3. Running the Simulation:__
-
-Once everything is installed and unzipped, you're ready to run the simulation. You can either run the simulation script from the Blender Text Editor or execute it via Blender's command-line interface in background mode.
-Option 1: Running in Blender's Text Editor
-
-+ Open Blender.
-+ Go to the Text Editor (located in the top bar under the scripting tab).
-+ Open the main Python script file (e.g., simulate_workpieces.py).
-+ Press Run Script to start the simulation.
-
-Option 2: Running via Command Line (Background Mode) __NOT YET WORKING__
-
-+ Open a terminal or command prompt.
-+ Navigate to the directory where Blender is installed.
-+ Use the following command to run the script in background mode:
-
-      blender -b --python simulate_workpieces.py
-
-__4. Docker:__
-
+```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
+python -m pip install numpy==1.26.4 numpy-stl matplotlib pybullet trimesh
+mkdir -p Simulation_Data/Bullet_Raw_Data/Logged_Simulations
 ```
-sudo docker build -t bibazu-docker .
+
+In [Main.py](Main.py), choose `workpiece_names`, `surface_name`, `simulation_number` and the parameter arrays near the top of the file. The script runs every combination. For a short first run, select one workpiece, one value per array and a small trial count. Set the worker count in `Pool(32)` to fit your machine.
+
+```bash
+python Main.py
 ```
+
+The sweep runs in PyBullet's headless mode. Each launch writes a new `Simulation_Data/Bullet_Raw_Data/simulation_outcomes_new.csv` with one row per parameter combination. The row records the inputs, outcome frequencies, sliding distance and orientation changes. Copy any existing output you want to keep before rerunning the sweep. Raw logs are written per workpiece under `Logged_Simulations`, so runs for the same workpiece can overwrite earlier raw logs.
+
+## Code and data
+
+| Path | Contents |
+| --- | --- |
+| [Main.py](Main.py) | Defines the parameter sweep, runs trials in parallel and writes the summary CSV. |
+| [DroptestsFaster.py](DroptestsFaster.py) | Runs the PyBullet trials and records positions, orientations and angular velocities before and after the force pulse. |
+| [PoseFinder.py](PoseFinder.py) | Classifies outcomes and computes sliding distance and orientation statistics. |
+| [Workpieces](Workpieces) and [Surfaces](Surfaces) | Workpiece and chute geometry, including `Teil_1` through `Teil_5` and the `Slide_Long` chute. |
+| [Bullet_Raw_Data](Simulation_Data/Bullet_Raw_Data) | Saved outcome CSVs and sample raw logs. |
+
+## Docker
+
+The [Dockerfile](Dockerfile) installs the repository's [requirements](requirements.txt). From the repository root, build the image and mount the checkout so the simulator can read the meshes and write its outputs.
+
+```bash
+docker build -t bibazu-simulator .
+docker run --rm --mount "type=bind,source=$PWD,target=/external_repo" bibazu-simulator \
+  sh -c 'mkdir -p /external_repo/Simulation_Data/Bullet_Raw_Data/Logged_Simulations && python /external_repo/Main.py'
 ```
-sudo docker run -it bibazu-docker
-```
-```
-sudo docker run -v $(pwd):/external_repo -it bibazu-docker
-```
+
+## Earlier Blender workflow
+
+[PoseFinderOriginal](PoseFinderOriginal) contains the earlier Blender scenes, mesh archives and MATLAB pose analysis. [STLtoOBJConverter.py](STLtoOBJConverter.py) uses Blender's `bpy` API to convert new geometry. The PyBullet sweep can use the prepared meshes directly.
+
+The repository is distributed under the [MIT License](LICENSE).
