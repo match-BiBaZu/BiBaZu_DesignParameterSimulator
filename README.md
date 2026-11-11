@@ -1,5 +1,14 @@
+# BiBaZu Design Parameter Simulator
 
-# bibazu_simulate_poses
+## PyBullet design parameter study
+
+This repository contains the PyBullet simulation code for the following paper.
+
+Dasha Shieff, Tobias Recker and Annika Raatz (2025). [Aerodynamic Feeding 4.1: Simulation Based Parameter Selection for a Flexible Part Feeding Prototype](https://doi.org/10.1016/j.procir.2025.08.092). *Procedia CIRP*, 136, 534–539.
+
+[Main.py](Main.py) sets up the parameter sweep, and [DroptestsFaster.py](DroptestsFaster.py) runs the PyBullet drop simulations.
+
+## Blender pose finding
 
 A Blender-based simulation tool designed to model and visualize workpieces being dropped onto flat surfaces from a chute. This repository contains scripts and assets that enable the creation of dynamic simulations for evaluating how various workpieces behave under controlled drop conditions.
 
